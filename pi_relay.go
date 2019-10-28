@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 
 	"periph.io/x/periph/conn/gpio"
@@ -24,31 +26,35 @@ type PiRelay struct {
 	pumpPin  gpio.PinOut
 }
 
-func NewRelay() *PiRelay {
+func NewRelay() (*PiRelay, error) {
 	// Make sure periph is initialized.
 	if _, err := host.Init(); err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return nil, fmt.Errorf("failed to initialise periph: %v", err)
 	}
 
 	valvePin := gpioreg.ByName("P1_12")
 	if valvePin == nil {
-		log.Fatal("Failed to find GPIO pin")
+		log.Print("Failed to find GPIO pin")
+		return nil, errors.New("failed to find GPIO pin")
 	}
 
-	// if pumpPin := gpioreg.ByName("P1_12"); pumpPin == nil {
-	// 	log.Fatal("Failed to find GPIO pin")
-	// }
+	pumpPin := gpioreg.ByName("P1_16")
+	if pumpPin == nil {
+		log.Print("Failed to find GPIO pin")
+		return nil, errors.New("failed to find GPIO pin")
+	}
 
 	var relay = &PiRelay{
 		valvePin: valvePin,
-		// pumpPin:  gpio.PinOut,
+		pumpPin:  pumpPin,
 	}
 
 	// Initially in a stopped state.
 	relay.stopPump()
 	relay.closeValve()
 
-	return relay
+	return relay, nil
 }
 
 func (r *PiRelay) openValve() error {

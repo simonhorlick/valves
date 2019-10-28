@@ -63,7 +63,11 @@ func main() {
 	if *test {
 		relay = &fakeRelay{}
 	} else {
-		relay = NewRelay()
+		var err error
+		relay, err = NewRelay()
+		if err != nil {
+			log.Fatalf("failed to start: %v", err)
+		}
 	}
 
 	controller := &PumpController{enabled: true, relay: relay}
