@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"html/template"
 	"log"
@@ -11,29 +12,8 @@ import (
 var (
 	openDuration = flag.Int("duration", 5, "how long the valve should be open for in minutes")
 	openPeriod   = flag.Int("period", 30, "time between valve open periods in minutes")
+	test         = flag.Bool("test", false, "use the fake test relay")
 )
-
-type fakeRelay struct{}
-
-func (r *fakeRelay) openValve() error {
-	log.Printf("open valve")
-	return nil
-}
-
-func (r *fakeRelay) closeValve() error {
-	log.Printf("close valve")
-	return nil
-}
-
-func (r *fakeRelay) startPump() error {
-	log.Printf("start pump")
-	return nil
-}
-
-func (r *fakeRelay) stopPump() error {
-	log.Printf("stop pump")
-	return nil
-}
 
 type PumpController struct {
 	enabled bool
@@ -60,22 +40,35 @@ func (p *PumpController) Run() {
 
 func (p *PumpController) Start() {
 	log.Printf("starting pump")
-	p.enabled = true
+	//p.enabled = true
+	p.relay.startPump()
+	p.relay.openValve()
 }
 
 func (p *PumpController) Stop() {
 	log.Printf("stopping pump")
-	p.enabled = false
+	//p.enabled = false
+	p.relay.stopPump()
+	p.relay.closeValve()
+}
+
+func (p *PumpController) RelayState() (valveOpen bool, pumpOn bool) {
+	return p.relay.state()
 }
 
 func main() {
 	flag.Parse()
 
-	var relay Relay = &fakeRelay{} //NewRelay()
+	var relay Relay
+	if *test {
+		relay = &fakeRelay{}
+	} else {
+		relay = NewRelay()
+	}
 
 	controller := &PumpController{enabled: true, relay: relay}
 
-	go controller.Run()
+	//go controller.Run()
 
 	// Log time in microseconds and filenames with log messages.
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
@@ -98,6 +91,22 @@ func createMux(controller *PumpController) http.Handler {
 	})
 	m.HandleFunc("/api/v1/stop", func(w http.ResponseWriter, r *http.Request) {
 		controller.Stop()
+	})
+	m.HandleFunc("/api/v1/state", func(w http.ResponseWriter, r *http.Request) {
+		valveOpen, pumpOn := controller.RelayState()
+		type Response struct {
+			ValveOpen bool `json:"valve_open"`
+			PumpOn    bool `json:"pump_on"`
+		}
+
+		js, err := json.Marshal(Response{ValveOpen: valveOpen, PumpOn: pumpOn})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 	})
 	m.HandleFunc("/", homeHandler)
 	return m

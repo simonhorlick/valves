@@ -4,27 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>valves</title>
+    <style>
+      * {
+        /* Include the border and padding sizes in an elements width and height. */
+        box-sizing: border-box;
+
+        /* Use proper font antialiasing. */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        background-color: #5574ff;
+        color: #ffffff;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      .center {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
 
   <body>
-    <h1>valves</h1>
-    <button id="start">start</button>
-    <button id="stop">stop</button>
+    <div class="center">
+      <h1>valves</h1>
+      <button id="start" class="hidden">start</button>
+      <button id="stop" class="hidden">stop</button>
+    </div>
 
     <script>
       let startButton = document.querySelector("#start");
       let stopButton = document.querySelector("#stop");
 
       startButton.addEventListener("click", e => {
+        startButton.disabled = true;
+        stopButton.disabled = true;
         fetch("/api/v1/start", { method: "POST" }).then(response => {
           console.log(response);
+          startButton.classList = ["hidden"];
+          stopButton.classList = [""];
+          startButton.disabled = false;
+          stopButton.disabled = false;
         });
       });
 
       stopButton.addEventListener("click", e => {
+        startButton.disabled = true;
+        stopButton.disabled = true;
         fetch("/api/v1/stop", { method: "POST" }).then(response => {
           console.log(response);
+          startButton.classList = [""];
+          stopButton.classList = ["hidden"];
+          startButton.disabled = false;
+          stopButton.disabled = false;
         });
+      });
+
+      fetch("/api/v1/state", { method: "GET" }).then(async response => {
+        let json = await response.json();
+        if (json["valve_open"] == true) {
+          startButton.classList = ["hidden"];
+          stopButton.classList = [""];
+        } else {
+          startButton.classList = [""];
+          stopButton.classList = ["hidden"];
+        }
       });
     </script>
   </body>
