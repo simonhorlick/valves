@@ -41,22 +41,30 @@ func (p *PumpController) Run() {
 func (p *PumpController) Start() {
 	log.Printf("starting pump")
 	//p.enabled = true
-	p.relay.startPump()
-	p.relay.openValve()
+	if err := p.relay.startPump(); err != nil {
+		log.Printf("failed to start pump: %v", err)
+	}
+	if err := p.relay.openValve(); err != nil {
+		log.Printf("failed to open valve: %v", err)
+	}
 }
 
 func (p *PumpController) Stop() {
 	log.Printf("stopping pump")
 	//p.enabled = false
-	p.relay.stopPump()
-	p.relay.closeValve()
+	if err := p.relay.stopPump(); err != nil {
+		log.Printf("failed to stop pump: %v", err)
+	}
+	if err := p.relay.closeValve(); err != nil {
+		log.Printf("failed to close valve: %v", err)
+	}
 }
 
 func (p *PumpController) RelayState() (valveOpen bool, pumpOn bool) {
 	return p.relay.state()
 }
 
-func main() {
+func main2() {
 	flag.Parse()
 
 	var relay Relay

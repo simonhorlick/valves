@@ -58,23 +58,43 @@ func NewRelay() (*PiRelay, error) {
 }
 
 func (r *PiRelay) openValve() error {
+	err := r.valvePin.Out(gpio.High)
+	if err != nil {
+		return err
+	}
+
 	r.valveOpen = true
-	return r.valvePin.Out(gpio.High)
+	return nil
 }
 
 func (r *PiRelay) closeValve() error {
+	err := r.valvePin.Out(gpio.Low)
+	if err != nil {
+		return err
+	}
+
 	r.valveOpen = false
-	return r.valvePin.Out(gpio.Low)
+	return nil
 }
 
 func (r *PiRelay) startPump() error {
+	err := r.pumpPin.Out(gpio.High)
+	if err != nil {
+		return err
+	}
+
 	r.pumpOn = true
-	return r.pumpPin.Out(gpio.High)
+	return nil
 }
 
 func (r *PiRelay) stopPump() error {
+	err := r.pumpPin.Out(gpio.Low)
+	if err != nil {
+		return err
+	}
+
 	r.pumpOn = false
-	return r.pumpPin.Out(gpio.Low)
+	return nil
 }
 
 func (r *PiRelay) state() (valveOpen bool, pumpOn bool) {
