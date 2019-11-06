@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"flag"
 	"html/template"
@@ -13,6 +14,8 @@ var (
 	openDuration = flag.Int("duration", 5, "how long the valve should be open for in minutes")
 	openPeriod   = flag.Int("period", 30, "time between valve open periods in minutes")
 	test         = flag.Bool("test", false, "use the fake test relay")
+	username     = flag.String("username", "", "username for http authentication")
+	password     = flag.String("password", "", "password for http authentication")
 )
 
 type PumpController struct {
@@ -85,8 +88,9 @@ func main2() {
 	// Log time in microseconds and filenames with log messages.
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
 
-	log.Printf("server started on http://localhost:8000")
-	log.Fatal(http.ListenAndServe(":8000", createMux(controller)))
+	log.Printf("server started on https://localhost:8443")
+	log.Fatal(http.ListenAndServeTLS(":8443", "cert.pem", "key.pem",
+		createMux(controller)))
 }
 
 var (
@@ -94,17 +98,29 @@ var (
 		ParseGlob("templates/*.html"))
 )
 
+func auth(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if ok &&
+			subtle.ConstantTimeCompare([]byte(user), []byte(*username)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(pass), []byte(*password)) == 1 {
+			fn(w, r)
+		}
+		http.Error(w, "Unauthorized.", 401)
+	}
+}
+
 // createMux returns an HTTP router that serves HTTP requests for different
 // routes.
 func createMux(controller *PumpController) http.Handler {
 	m := http.NewServeMux()
-	m.HandleFunc("/api/v1/start", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("/api/v1/start", auth(func(w http.ResponseWriter, r *http.Request) {
 		controller.Start()
-	})
-	m.HandleFunc("/api/v1/stop", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	m.HandleFunc("/api/v1/stop", auth(func(w http.ResponseWriter, r *http.Request) {
 		controller.Stop()
-	})
-	m.HandleFunc("/api/v1/state", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	m.HandleFunc("/api/v1/state", auth(func(w http.ResponseWriter, r *http.Request) {
 		valveOpen, pumpOn := controller.RelayState()
 		type Response struct {
 			ValveOpen bool `json:"valve_open"`
@@ -119,8 +135,8 @@ func createMux(controller *PumpController) http.Handler {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(js)
-	})
-	m.HandleFunc("/", homeHandler)
+	}))
+	m.HandleFunc("/", auth(homeHandler))
 	return m
 }
 
