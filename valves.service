@@ -4,7 +4,7 @@ Description=Valve controller UI
 [Service]
 TimeoutStartSec=0
 Restart=always
-ExecStart=/home/simon/valves/valves
+ExecStart=/home/simon/valves/valves -username=$VALVES_USER -password=$VALVES_PASSWORD
 
 [Install]
 WantedBy=multi-user.target

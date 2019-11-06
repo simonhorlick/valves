@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -67,7 +68,7 @@ func (p *PumpController) RelayState() (valveOpen bool, pumpOn bool) {
 	return p.relay.state()
 }
 
-func main2() {
+func main() {
 	flag.Parse()
 
 	var relay Relay
@@ -106,7 +107,9 @@ func auth(fn http.HandlerFunc) http.HandlerFunc {
 			subtle.ConstantTimeCompare([]byte(pass), []byte(*password)) == 1 {
 			fn(w, r)
 		}
-		http.Error(w, "Unauthorized.", 401)
+		w.Header().Set("WWW-Authenticate",
+			fmt.Sprintf("Basic realm=\"%s\"", "Restricted"))
+		http.Error(w, "", 401)
 	}
 }
 
