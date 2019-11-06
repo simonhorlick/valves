@@ -1,0 +1,10 @@
+[Unit]
+Description=Valve controller UI
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStart=/home/simon/valves/valves
+
+[Install]
+WantedBy=multi-user.target
